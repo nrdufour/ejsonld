@@ -1,0 +1,17 @@
+%
+% This file is part of ejsonld released under the MIT license.
+% See the LICENSE file for more information.
+%
+
+{application, ejsonld,
+ [
+  {description, "Erlang JSON-LD Framework"},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ej_app, []}},
+  {env, []}
+ ]}.
