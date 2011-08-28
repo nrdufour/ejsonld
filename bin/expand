@@ -1,5 +1,5 @@
 #! /usr/bin/env escript
-%%! -pa ./ebin/ -pa ./deps/jsx/ebin
+%%! -pa ./ebin/ -pa ./deps/ejson/ebin
 
 % This file is part of ejsonld released under the MIT license.
 % See the LICENSE file for more information.
@@ -13,11 +13,13 @@ main(Args) ->
 process_it(JsonFile) ->
     {ok, Json} = file:read_file(JsonFile),
 
-    JsonItem = jsx:json_to_term(Json),
+    JsonItem = ejson:decode(Json),
 
     ExpandedJsonItem = ejsonld:expand(JsonItem),
 
-    FinalJson = jsx:term_to_json(ExpandedJsonItem),
+%io:format("Final ~p~n", [ExpandedJsonItem]),
+
+    FinalJson = ejson:encode(ExpandedJsonItem),
 
     io:format("~s~n", [FinalJson]),
     ok.

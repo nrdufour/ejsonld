@@ -15,57 +15,59 @@
 -define(RELATIVE_CURIE, "^(?<iri>(\\:)?(?<name>\\w+))$").
 -define(BNODE, "^_\\:(?<id>\\w+)$").
 
-expand(Json) when is_list(Json) ->
-    % Grab a default context
+expand(Json) ->
     Context = ej_context:create_default(),
+    expand(Json, Context).
 
-    % Process if it's an object or a list
-    case ?IS_OBJECT(Json) of
-        % It's an object, just expand it
-        true  ->
-            expand_object(Json, Context);
-        % it's a list: go through each element
-        false ->
-            lists:foldl(
+expand([], _Context) ->
+    [];
+expand({[]}, _Context) ->
+    {[]};
+expand(Json, Context) when is_list(Json) ->
+    lists:foldl(
+        fun(Item, Acc) ->
+            ExpandedObject = expand(Item, Context),
+            Acc ++ [ExpandedObject]
+        end,
+        [],
+        Json
+    );
+expand(Json, Context) ->
+    case Json of
+        {[_|_]} ->
+            % First let's see if there is a context local to that object
+            CurrentContext = ej_context:process_local_context(Json, Context),
+
+            {Proplist} = Json,
+            % Then process each property by expanding the key and the value
+            ExpandedProplist = lists:foldl(
                 fun(Item, Acc) ->
-                    ExpandedObject = expand_object(Item, Context),
-                    Acc ++ [ExpandedObject]
+                    {Key, Value} = Item,
+                    case Key of
+                        % Ignoring the context property now
+                        ?LOCAL_CONTEXT_KEY ->
+                            Acc;
+                        % Processing all the others
+                        _ ->
+                            ExpandedProp = {
+                                expand_object_key(Key, CurrentContext),
+                                expand_object_value(Value, CurrentContext)
+                            },
+                            Acc ++ [ExpandedProp]
+                    end
                 end,
                 [],
-                Json
-            )
-    end;
-expand(Json) ->
-    Json.
+                Proplist
+            ),
+
+            {ExpandedProplist};
+        _ ->
+            Json
+    end.
 
 %
 % Internal API
 %
-
-expand_object(Json, Context) ->
-    % First let's see if there is a context local to that object
-    CurrentContext = ej_context:process_local_context(Json, Context),
-
-    % Then process each property by expanding the key and the value
-    lists:foldl(
-        fun(Item, Acc) ->
-            {Key, Value} = Item,
-            case Key of
-                % Ignoring the context property now
-                ?LOCAL_CONTEXT_KEY ->
-                    Acc;
-                % Processing all the others
-                _ ->
-                    ExpandedProp = {
-                        expand_object_key(Key, CurrentContext),
-                        expand_object_value(Value, CurrentContext)
-                    },
-                    Acc ++ [ExpandedProp]
-            end
-        end,
-        [],
-        Json
-    ).
 
 % Process a triple property.
 % In JSON-LD, it's the key.
@@ -78,7 +80,6 @@ expand_object(Json, Context) ->
 %
 % returns the expanded property IRI
 expand_object_key(Key, Context) ->
-
     case ej_context:is_keyword(Key, Context) of
         true  ->
             Key;
@@ -135,22 +136,11 @@ expand_iri(Key, Context) ->
             throw([bad_property, Key])
     end.
 
-expand_object_value(Value, Context) when is_list(Value) ->
-    case ?IS_OBJECT(Value) of
-        true  ->
-            expand_object(Value, Context);
-        false ->
-            lists:foldl(
-                fun(Item, Acc) ->
-                    ExpandedValue = case ?IS_OBJECT(Item) of
-                        true  -> expand_object(Item, Context);
-                        false -> expand_object_value(Item, Context)
-                    end,
-                    Acc ++ [ExpandedValue]
-                end,
-                [],
-                Value
-            )
-    end;
-expand_object_value(Value, _Context) ->
-    Value.
+expand_object_value(Value, Context) ->
+    case Value of
+        []      -> expand(Value, Context);
+        [_|_]   -> expand(Value, Context);
+        {[]}    -> expand(Value, Context);
+        {[_|_]} -> expand(Value, Context);
+        _       -> Value
+    end.

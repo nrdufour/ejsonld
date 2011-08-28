@@ -7,7 +7,10 @@
 
 -include("jsonld.hrl").
 
--export([create_default/0, process_local_context/2, has_prefix/2, get_prefix/2, get_base/1, get_vocab/1, is_keyword/2]).
+-export([create_default/0, process_local_context/2]).
+-export([has_prefix/2, get_prefix/2]).
+-export([get_base/1, get_vocab/1, get_default/1]).
+-export([is_keyword/2]).
 
 -record(context, {
         % 'names' is a simple dict that maps a set of names to a set of IRI
@@ -27,7 +30,10 @@
         % 'keywords' is a simple dict that maps names to json-ld keywords
         % such as @type or @subject, allowing you to override them for any reason
         % Only '@context' can't be overriden for obvious reason.
-        keywords
+        keywords,
+
+        % default context if it's a unique IRI
+        default = undefined
     }
 ).
 
@@ -38,8 +44,11 @@ create_default() ->
     #context{ names = DefaultNames, coerce = DefaultCoerce, keywords = DefaultKeywords }.
 
 process_local_context(JsonObject, Context) ->
+    {Proplist} = JsonObject,
+
     % Local Context: merge if exists
-    LocalContextProp = ?HAS_VALUE(JsonObject, ?LOCAL_CONTEXT_KEY),
+    LocalContextProp = ?HAS_VALUE(Proplist, ?LOCAL_CONTEXT_KEY),
+
     case LocalContextProp of
         false -> Context;
         {_, Value} ->
@@ -58,6 +67,9 @@ get_base(Context) ->
 get_vocab(Context) ->
     Context#context.vocab.
 
+get_default(Context) ->
+    Context#context.default.
+
 is_keyword(Key, Context) ->
     dict:is_key(Key, Context#context.keywords).
 
@@ -66,7 +78,9 @@ is_keyword(Key, Context) ->
 %
 
 % NewNames has to be a proplist here
-merge(Context, NewNames) when is_list(NewNames) ->
+merge(Context, {[_|_]} = ContextValues) ->
+    {Proplist} = ContextValues,
+
     Fun = fun({Key, Value}, Ctx) ->
         case Key of
             ?VOCAB_KEY  -> Ctx#context{ vocab = Value };
@@ -79,7 +93,15 @@ merge(Context, NewNames) when is_list(NewNames) ->
                 Ctx#context{ names = UpdatedNames }
         end
     end,
-    lists:foldl(Fun, Context, NewNames).
+    lists:foldl(Fun, Context, Proplist);
+merge(Context, Binary) when is_binary(Binary) ->
+    Context#context{ default = Binary};
+merge(Context, _) ->
+    Context.
+
+%
+% ---
+%
 
 create_default_names() ->
     InitialDict = dict:new(),
