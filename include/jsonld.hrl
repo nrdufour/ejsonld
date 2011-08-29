@@ -33,6 +33,4 @@
 ]
 ).
 
--define(IS_OBJECT(Obj), ej_util:is_proplist(Obj)).
-
 -define(HAS_VALUE(Proplist, Key), lists:keyfind(Key, 1, Proplist)).

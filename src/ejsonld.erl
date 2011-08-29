@@ -6,10 +6,7 @@
 -module(ejsonld).
 -author("Nicolas R Dufour <nicolas.dufour@nemoworld.info>").
 
--export([start/0, expand/1, compact/1, frame/3, normalize/1]).
-
-start() ->
-    application:start(ejsonld).
+-export([expand/1, compact/1, frame/3, normalize/1]).
 
 % Process JSON expressed in EEP018
 

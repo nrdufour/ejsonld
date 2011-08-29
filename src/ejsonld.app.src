@@ -12,6 +12,5 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { ej_app, []}},
   {env, []}
  ]}.
