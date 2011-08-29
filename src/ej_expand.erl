@@ -48,6 +48,7 @@ expand(Json, Context) ->
                         ?LOCAL_CONTEXT_KEY ->
                             Acc;
                         ?TYPE_KEY ->
+                            % TODO need to put that string in a define...
                             ExpandedProp = {
                                 <<"http://www.w3.org/1999/02/22-rdf-syntax-ns#type">>,
                                 expand_object_value(Value, CurrentContext, ?IRI_KEY)
