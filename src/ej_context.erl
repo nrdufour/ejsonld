@@ -78,26 +78,54 @@ is_keyword(Key, Context) ->
 %
 
 % NewNames has to be a proplist here
-merge(Context, {[_|_]} = ContextValues) ->
-    {Proplist} = ContextValues,
+merge(Context, ContextValues) ->
+    case ContextValues of
+        {[_|_]} ->
+            {Proplist} = ContextValues,
 
-    Fun = fun({Key, Value}, Ctx) ->
-        case Key of
-            ?VOCAB_KEY  -> Ctx#context{ vocab = Value };
-            ?BASE_KEY   -> Ctx#context{ base  = Value };
-            ?COERCE_KEY ->
-                % TODO
-                Ctx;
-            _ ->
-                UpdatedNames = dict:store(Key, Value, Ctx#context.names),
-                Ctx#context{ names = UpdatedNames }
-        end
-    end,
-    lists:foldl(Fun, Context, Proplist);
-merge(Context, Binary) when is_binary(Binary) ->
-    Context#context{ default = Binary};
-merge(Context, _) ->
-    Context.
+            Fun = fun({Key, Value}, Ctx) ->
+                case Key of
+                    ?VOCAB_KEY  -> Ctx#context{ vocab = Value };
+                    ?BASE_KEY   -> Ctx#context{ base  = Value };
+                    ?COERCE_KEY ->
+                        CoerceValue = ?HAS_VALUE(Proplist, ?COERCE_KEY),
+                        case CoerceValue of
+                            false ->
+                                Ctx;
+                            _     ->
+                                {?COERCE_KEY, {CoerceValues}} = CoerceValue,
+                                UpdatedCoerceDict = lists:foldl(
+                                    fun({Type, Keys}, Dict) ->
+                                        case is_list(Keys) of
+                                            true  ->
+                                                lists:foldl(
+                                                    fun(Item, Acc) ->
+                                                        dict:store(Item, Type, Acc)
+                                                    end,
+                                                    Dict,
+                                                    Keys
+                                                );
+                                            false ->
+                                                dict:store(Keys, Type, Dict)
+                                        end
+                                    end,
+                                    Ctx#context.coerce,
+                                    CoerceValues
+                                ),
+
+                                Ctx#context{coerce = UpdatedCoerceDict}
+                        end;
+                    _ ->
+                        UpdatedNames = dict:store(Key, Value, Ctx#context.names),
+                        Ctx#context{ names = UpdatedNames }
+                end
+            end,
+            lists:foldl(Fun, Context, Proplist);
+        Binary when is_binary(Binary) ->
+            Context#context{ default = ContextValues };
+        _ ->
+            Context
+    end.
 
 %
 % ---
