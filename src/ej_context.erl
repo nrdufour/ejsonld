@@ -49,10 +49,28 @@ process_local_context(JsonObject, Context) ->
     % Local Context: merge if exists
     LocalContextProp = ?HAS_VALUE(Proplist, ?LOCAL_CONTEXT_KEY),
 
-    case LocalContextProp of
+    UpdatedContext = case LocalContextProp of
         false -> Context;
         {_, Value} ->
             merge(Context, Value)
+    end,
+
+    % see if @vocab exists
+    % TODO need to really fully support keyword override
+    VocabKey = ?VOCAB_KEY,
+    VocabProp = ?HAS_VALUE(Proplist, VocabKey),
+    CtxWithVocab = case VocabProp of
+        false -> UpdatedContext;
+        {_, VocabValue} -> UpdatedContext#context{ vocab = VocabValue }
+    end,
+
+    % see if @base exists
+    % TODO need to really fully support keyword override
+    BaseKey = ?BASE_KEY,
+    BaseProp = ?HAS_VALUE(Proplist, BaseKey),
+    case BaseProp of
+        false -> CtxWithVocab;
+        {_, BaseValue} -> CtxWithVocab#context{ base = BaseValue}
     end.
 
 has_prefix(Context, Prefix) ->
@@ -85,8 +103,6 @@ merge(Context, ContextValues) ->
 
             Fun = fun({Key, Value}, Ctx) ->
                 case Key of
-                    ?VOCAB_KEY  -> Ctx#context{ vocab = Value };
-                    ?BASE_KEY   -> Ctx#context{ base  = Value };
                     ?COERCE_KEY ->
                         CoerceValue = ?HAS_VALUE(Proplist, ?COERCE_KEY),
                         case CoerceValue of
