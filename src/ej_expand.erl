@@ -48,9 +48,8 @@ expand(Json, Context) ->
                         ?LOCAL_CONTEXT_KEY ->
                             Acc;
                         ?TYPE_KEY ->
-                            % TODO need to put that string in a define...
                             ExpandedProp = {
-                                <<"http://www.w3.org/1999/02/22-rdf-syntax-ns#type">>,
+                                ?TYPE_IRI,
                                 expand_object_value(Value, CurrentContext, ?IRI_KEY)
                             },
                             Acc ++ [ExpandedProp];
@@ -158,7 +157,6 @@ expand_iri(Key, Context) ->
         {_, _, {match, [_IRI, Name]}} ->
             % let's grab the @vocab value
             % or the default context URI
-            % TODO need to add that default context
             Vocab = ej_context:get_vocab(Context),
             case Vocab of
                 % no vocab is defined!
@@ -166,6 +164,7 @@ expand_iri(Key, Context) ->
                 undefined ->
                     case ej_context:has_prefix(Context, Name) of
                         false ->
+                            % see if a default namespace exists in the context
                             DefaultNamespace = ej_context:get_default(Context),
                             case DefaultNamespace of
                                 undefined ->
@@ -175,6 +174,7 @@ expand_iri(Key, Context) ->
                                     iolist_to_binary([DefaultNamespace, Key])
                             end;
                         true ->
+                            % the relative curie is registered in the context
                             ej_context:get_prefix(Context, Name)
                     end;
                 % we have a vocab: prepend the name with it

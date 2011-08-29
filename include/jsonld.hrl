@@ -15,6 +15,8 @@
 -define(SUBJECT_KEY, <<"@subject">>).
 -define(TYPE_KEY, <<"@type">>).
 
+-define(TYPE_IRI, <<"http://www.w3.org/1999/02/22-rdf-syntax-ns#type">>).
+
 -define(DEFAULT_KEYWORDS,
 [
         %?LOCAL_CONTEXT_KEY, % The is obviously not overridable ;-)
