@@ -47,12 +47,27 @@ expand(Json, Context) ->
                         % Ignoring the context property now
                         ?LOCAL_CONTEXT_KEY ->
                             Acc;
+                        ?TYPE_KEY ->
+                            ExpandedProp = {
+                                <<"http://www.w3.org/1999/02/22-rdf-syntax-ns#type">>,
+                                expand_object_value(Value, CurrentContext, ?IRI_KEY)
+                            },
+                            Acc ++ [ExpandedProp];
                         % Processing all the others
                         _ ->
-                            ExpandedProp = {
-                                expand_object_key(Key, CurrentContext),
-                                expand_object_value(Value, CurrentContext)
-                            },
+                            ExpandedProp = case ej_context:has_coerce(CurrentContext, Key) of
+                                false ->
+                                    {
+                                        expand_object_key(Key, CurrentContext),
+                                        expand(Value, CurrentContext)
+                                    };
+                                true  ->
+                                    CoerceType = ej_context:get_coerce(CurrentContext, Key),
+                                    {
+                                        expand_object_key(Key, CurrentContext),
+                                        expand_object_value(Value, CurrentContext, CoerceType)
+                                    }
+                            end,
                             Acc ++ [ExpandedProp]
                     end
                 end,
@@ -87,6 +102,37 @@ expand_object_key(Key, Context) ->
             expand_iri(Key, Context)
     end.
 
+expand_object_value(Value, Context, CoerceType) ->
+    case CoerceType of
+        ?IRI_KEY ->
+            case is_list(Value) of
+                true  ->
+                    lists:foldl(
+                        fun(Item, Acc) ->
+                            ExpandedIRI = expand_iri(Item, Context),
+                            Acc ++ [{[ { ?IRI_KEY, ExpandedIRI } ]}]
+                        end,
+                        [],
+                        Value
+                    );
+                false ->
+                    ExpandedIRI = expand_iri(Value, Context),
+                    {[ { ?IRI_KEY, ExpandedIRI } ]}
+            end;
+        _ ->
+            ExpandedCoerce = expand_iri(CoerceType, Context),
+            {[ { ?DATATYPE_KEY, ExpandedCoerce }, { ?LITERAL_KEY, Value } ]}
+    end.
+
+expand_iri(Key, Context) when is_list(Key) ->
+    lists:foldl(
+        fun(Item, Acc) ->
+            IRI = expand_iri(Item, Context),
+            Acc ++ [IRI]
+        end,
+        [],
+        Key
+    );
 expand_iri(Key, Context) ->
     % regexp to identify which type of property we have
     AbsoluteIri = re:run(Key, ?ABSOLUTE_IRI, [{capture, ['iri'], binary}]),
@@ -134,13 +180,4 @@ expand_iri(Key, Context) ->
         % anything else: error
         _ ->
             throw([bad_property, Key])
-    end.
-
-expand_object_value(Value, Context) ->
-    case Value of
-        []      -> expand(Value, Context);
-        [_|_]   -> expand(Value, Context);
-        {[]}    -> expand(Value, Context);
-        {[_|_]} -> expand(Value, Context);
-        _       -> Value
     end.

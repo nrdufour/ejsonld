@@ -11,6 +11,7 @@
 -export([has_prefix/2, get_prefix/2]).
 -export([get_base/1, get_vocab/1, get_default/1]).
 -export([is_keyword/2]).
+-export([has_coerce/2, get_coerce/2]).
 
 -record(context, {
         % 'names' is a simple dict that maps a set of names to a set of IRI
@@ -90,6 +91,12 @@ get_default(Context) ->
 
 is_keyword(Key, _Context) ->
     lists:member(Key, ?DEFAULT_KEYWORDS).
+
+has_coerce(Context, Key) ->
+    dict:is_key(Key, Context#context.coerce).
+
+get_coerce(Context, Key) ->
+    dict:fetch(Key, Context#context.coerce).
 
 %
 % Internal API
