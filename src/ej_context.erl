@@ -88,8 +88,8 @@ get_vocab(Context) ->
 get_default(Context) ->
     Context#context.default.
 
-is_keyword(Key, Context) ->
-    dict:is_key(Key, Context#context.keywords).
+is_keyword(Key, _Context) ->
+    lists:member(Key, ?DEFAULT_KEYWORDS).
 
 %
 % Internal API
