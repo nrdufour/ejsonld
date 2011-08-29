@@ -1,0 +1,7 @@
+
+ejsonld changelog
+-----------------
+
+* 0.0.1
+    - implements ejsonld:expand without keyword override (yet)
+
