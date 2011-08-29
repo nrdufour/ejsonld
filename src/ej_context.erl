@@ -155,14 +155,9 @@ merge(Context, ContextValues) ->
 %
 
 create_default_names() ->
-    InitialDict = dict:new(),
-    lists:foldl(
-        fun({Key, Value}, Dict) ->
-            dict:store(Key, Value, Dict)
-        end,
-        InitialDict,
-        ?DEFAULT_NAMES).
+    dict:new().
 
+% only useful once the override feature is supported
 create_default_keywords() ->
     InitialDict = dict:new(),
     lists:foldl(

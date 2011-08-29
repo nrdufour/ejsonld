@@ -166,12 +166,14 @@ expand_iri(Key, Context) ->
                 undefined ->
                     case ej_context:has_prefix(Context, Name) of
                         false ->
-                            % TODO define a default context in jsonld_context.erl
-                            % In case somebody would do:
-                            % @context: "http://...."
-
-                            % throwing an error for now
-                            throw([bad_property, Key]);
+                            DefaultNamespace = ej_context:get_default(Context),
+                            case DefaultNamespace of
+                                undefined ->
+                                    % throwing an error for now
+                                    throw([bad_property, Key]);
+                                _ ->
+                                    iolist_to_binary([DefaultNamespace, Key])
+                            end;
                         true ->
                             ej_context:get_prefix(Context, Name)
                     end;
