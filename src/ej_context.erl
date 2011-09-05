@@ -12,6 +12,10 @@
 -export([get_base/1, get_vocab/1, get_default/1]).
 -export([is_keyword/2]).
 -export([has_coerce/2, get_coerce/2]).
+-export([register_prefix/3]).
+-export([get_all_prefixes/1]).
+-export([register_coerce/3]).
+-export([get_coerce_context/1]).
 
 -record(context, {
         % 'names' is a simple dict that maps a set of names to a set of IRI
@@ -25,7 +29,7 @@
         % vocab is an IRI which prefix all property IRIs
         vocab = undefined,
 
-        % coerce is a proplist which maps a type to an element name
+        % coerce is a proplist which maps a element name to an type
         coerce,
 
         % 'keywords' is a simple dict that maps names to json-ld keywords
@@ -97,6 +101,45 @@ has_coerce(Context, Key) ->
 
 get_coerce(Context, Key) ->
     dict:fetch(Key, Context#context.coerce).
+
+register_prefix(Prefix, URI, Context) ->
+    Names = Context#context.names,
+
+    UpdatedNames = dict:store(Prefix, URI, Names),
+
+    Context#context{ names = UpdatedNames}.
+
+get_all_prefixes(Context) ->
+    dict:fetch_keys(Context#context.names).
+
+register_coerce(KeyName, Type, Context) ->
+    Coerce = Context#context.coerce,
+
+    UpdatedCoerce = dict:store(KeyName, Type, Coerce),
+
+    Context#context{ coerce = UpdatedCoerce }.
+
+get_coerce_context(Context) ->
+    lists:foldl(
+        fun(KeyName, Acc) ->
+            Type = dict:fetch(KeyName, Context#context.coerce),
+            StoredValue = case dict:is_key(Type, Acc) of
+                true  ->
+                    Value = dict:fetch(Type, Acc),
+                    case is_list(Value) of
+                        true ->
+                            Value ++ [KeyName];
+                        false ->
+                            [Value, KeyName]
+                    end;
+                false ->
+                    KeyName
+            end,
+            dict:store(Type, StoredValue, Acc)
+        end,
+        dict:new(),
+        dict:fetch_keys(Context#context.coerce)
+    ).
 
 %
 % Internal API

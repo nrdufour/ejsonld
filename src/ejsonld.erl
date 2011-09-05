@@ -14,7 +14,7 @@ expand(Json) ->
     ej_expand:expand(Json).
 
 compact(Json) ->
-    Json.
+    ej_compact:compact(Json).
 
 frame(Json, _Frame, _Options) ->
     Json.

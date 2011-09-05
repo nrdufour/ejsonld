@@ -1,0 +1,25 @@
+#! /usr/bin/env escript
+%%! -pa ./ebin/ -pa ./deps/ejson/ebin
+
+% This file is part of ejsonld released under the MIT license.
+% See the LICENSE file for more information.
+
+main(Args) ->
+    case Args of
+        [JsonFile] -> process_it(JsonFile);
+        _ -> io:format("Wrong usage: jsonfile~n", [])
+    end.
+
+process_it(JsonFile) ->
+    {ok, Json} = file:read_file(JsonFile),
+
+    JsonItem = ejson:decode(Json),
+
+    CompactJsonItem = ejsonld:compact(JsonItem),
+
+%io:format("Final ~p~n", [CompactJsonItem]),
+
+    FinalJson = ejson:encode(CompactJsonItem),
+
+    io:format("~s~n", [FinalJson]),
+    ok.
